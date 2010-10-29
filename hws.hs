@@ -13,12 +13,10 @@ import Char
 main :: IO ()
 main = do program <- getContents
           let insns = compile program
-          run $ initVM insns
+--          run $ initVM insns
+          mapM_ (putStrLn.show) insns
 
 ------------------------------------------------------------------------
-
--- compile :: String -> [Instruction]
--- compile = undefined
 
 
 initVM :: [Instruction] -> VM
@@ -56,6 +54,7 @@ data Instruction = Push Int
                  | CharIn
                  | NumIn
                  | ParseErr String
+                 deriving (Show, Eq)
 
 
 type WSLabel = String
@@ -80,19 +79,19 @@ data Token = Space
 
 -- Space
 wsSpace :: Parser Token
-wsSpace = do { char ' '
+wsSpace = do { char 'S'
            ; return Space
            }
 
 -- Tab
 wsTab :: Parser Token
-wsTab = do { char '\t'
+wsTab = do { char 'T'
          ; return Tab
          }
 
 -- LF
 wsLf :: Parser Token
-wsLf = do { char '\n'
+wsLf = do { char 'L'
         ; return LF
         }
 
