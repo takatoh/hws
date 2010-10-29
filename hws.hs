@@ -17,8 +17,8 @@ main = do program <- getContents
 
 ------------------------------------------------------------------------
 
-compile :: String -> [Instruction]
-compile = undefined
+-- compile :: String -> [Instruction]
+-- compile = undefined
 
 
 initVM :: [Instruction] -> VM
@@ -55,6 +55,7 @@ data Instruction = Push Int
                  | NumOut
                  | CharIn
                  | NumIn
+                 | ParseErr String
 
 
 type WSLabel = String
@@ -410,10 +411,21 @@ instructionList = do { is <- many1 instruction
                      ; return is
                      }
 
+----
 
+runCompile :: Parser [Instruction] -> String -> [Instruction]
+runCompile p input = case (parse p [] input) of
+                     Left err -> [ParseErr (show err)]
+                     Right x  -> x
 
+runLex :: Parser [Instruction] -> String -> [Instruction]
+runLex p input = runCompile (do { x <- p
+                                ; eof
+                                ; return x
+                                }) input
 
-
+compile :: String -> [Instruction]
+compile = runLex instructionList
 
 ----
 
@@ -422,4 +434,6 @@ parseInt = undefined
 
 parseLabel :: [Token] -> WSLabel
 parseLabel = undefined
+
+------------------------------------------------------------------------
 
