@@ -193,8 +193,8 @@ mul = do { wsTab
          }
 
 -- div
-div :: Parser Instruction
-div = do { wsTab
+wsDiv :: Parser Instruction
+wsDiv = do { wsTab
          ; wsSpace
          ; wsTab
          ; wsSpace
@@ -202,8 +202,8 @@ div = do { wsTab
          }
 
 -- mod
-mod :: Parser Instruction
-mod = do { wsTab
+wsMod :: Parser Instruction
+wsMod = do { wsTab
          ; wsSpace
          ; wsTab
          ; wsLf
@@ -231,8 +231,8 @@ heapRead = do { wsTab
 ----
 
 -- label
-label :: Parser Instruction
-label = do { wsLf
+wsLabel :: Parser Instruction
+wsLabel = do { wsLf
            ; wsSpace
            ; wsSpace
            ; v <- value
@@ -326,6 +326,94 @@ numIn = do { wsTab
            ; wsTab
            ; return NumIn
            }
+
+----
+
+-- instructions
+instruction :: Parser Instruction
+instruction = do { i <- push
+                 ; return i
+                 }
+          <|> do { i <- dup
+                 ; return i
+                 }
+          <|> do { i <- copy
+                 ; return i
+                 }
+          <|> do { i <- swap
+                 ; return i
+                 }
+          <|> do { i <- discard
+                 ; return i
+                 }
+          <|> do { i <- slide
+                 ; return i
+                 }
+          <|> do { i <- add
+                 ; return i
+                 }
+          <|> do { i <- sub
+                 ; return i
+                 }
+          <|> do { i <- mul
+                 ; return i
+                 }
+          <|> do { i <- wsDiv
+                 ; return i
+                 }
+          <|> do { i <- wsMod
+                 ; return i
+                 }
+          <|> do { i <- heapWrite
+                 ; return i
+                 }
+          <|> do { i <- heapRead
+                 ; return i
+                 }
+          <|> do { i <- wsLabel
+                 ; return i
+                 }
+          <|> do { i <- call
+                 ; return i
+                 }
+          <|> do { i <- jump
+                 ; return i
+                 }
+          <|> do { i <- jumpZero
+                 ; return i
+                 }
+          <|> do { i <- jumpNega
+                 ; return i
+                 }
+          <|> do { i <- wsReturn
+                 ; return i
+                 }
+          <|> do { i <- wsExit
+                 ; return i
+                 }
+          <|> do { i <- charOut
+                 ; return i
+                 }
+          <|> do { i <- numOut
+                 ; return i
+                 }
+          <|> do { i <- charIn
+                 ; return i
+                 }
+          <|> do { i <- numIn
+                 ; return i
+                 }
+
+-- instruction list
+instructionList :: Parser [Instruction]
+instructionList = do { is <- many1 instruction
+                     ; return is
+                     }
+
+
+
+
+
 
 ----
 
