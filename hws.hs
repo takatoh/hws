@@ -1,6 +1,15 @@
 module Main where
 
 
+import Text.ParserCombinators.Parsec
+import Text.ParserCombinators.Parsec.Expr
+-- import qualified Text.ParserCombinators.Parsec.Token as P
+-- import Text.ParserCombinators.Parsec.Language( haskellStyle, haskellDef )
+import Char
+
+
+------------------------------------------------------------------------
+
 main :: IO ()
 main = do program <- getContents
           let insns = compile program
@@ -55,4 +64,52 @@ data VM = VM { stack :: [Int]
              , heap :: [Int]
              , inst :: [Instruction]
              }
+
+------------------------------------------------------------------------
+
+--
+-- Compiler
+--
+
+
+data Token = Space
+           | Tab
+           | LF
+
+
+-- Space
+wsSpace :: Parser Token
+wsSpace = do { char ' '
+           ; return Space
+           }
+
+-- Tab
+wsTab :: Parser Token
+wsTab = do { char '\t'
+         ; return Tab
+         }
+
+-- LF
+wsLf :: Parser Token
+wsLf = do { char '\n'
+        ; return LF
+        }
+
+-- token
+vToken :: Parser Token
+vToken = do { wsSpace
+            ; return Space
+            }
+     <|> do { wsTab
+            ; return Tab
+            }
+
+-- value
+value :: Parser [Token]
+value = do { v <- many1 vToken
+           ; wsLf
+           ; return v
+           }
+
+
 
