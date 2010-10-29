@@ -22,7 +22,33 @@ run = undefined
 
 ------------------------------------------------------------------------
 
-type Instruction = String   -- temporary
+data Instruction = Push Int
+                 | Dup
+                 | Copy Int
+                 | Swap
+                 | Discard
+                 | Slide Int
+                 | Add
+                 | Sub
+                 | Mul
+                 | Div
+                 | Mod
+                 | HeapWrite
+                 | HeapRead
+                 | Label WSLabel
+                 | Call WSLabel
+                 | Jump WSLabel
+                 | JumpZero WSLabel
+                 | JumpNega WSLabel
+                 | Return
+                 | Exit
+                 | CharOut
+                 | NumOut
+                 | CharIn
+                 | NumIn
+
+
+type WSLabel = String
 
 
 data VM = VM { stack :: [Int]
