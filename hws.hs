@@ -19,12 +19,12 @@ main = do program <- getContents
 ------------------------------------------------------------------------
 
 
-initVM :: [Instruction] -> VM
-initVM = undefined
-
-
-run :: VM -> IO ()
-run = undefined
+--initVM :: [Instruction] -> VM
+--initVM = undefined
+--
+--
+--run :: VM -> IO ()
+--run = undefined
 
 
 ------------------------------------------------------------------------
@@ -113,296 +113,133 @@ value = do { v <- many1 vToken
 
 ----
 
--- push
-push :: Parser Instruction
-push = do { wsSpace
-          ; wsSpace
-          ; v <- value
-          ; return (Push (parseInt v))
-          }
-
--- dup
-dup :: Parser Instruction
-dup = do { wsSpace
-         ; wsLf
-         ; wsSpace
-         ; return Dup
-         }
-
--- copy
-copy :: Parser Instruction
-copy = do { wsSpace
-          ; wsTab
-          ; wsSpace
-          ; v <- value
-          ; return (Copy (parseInt v))
-          }
-
--- swap
-swap :: Parser Instruction
-swap = do { wsSpace
-          ; wsLf
-          ; wsTab
-          ; return Swap
-          }
-
--- discard
-discard :: Parser Instruction
-discard = do { wsSpace
-          ; wsLf
-          ; wsLf
-          ; return Discard
-          }
-
--- slide
-slide :: Parser Instruction
-slide = do { wsSpace
-           ; wsTab
-           ; wsLf
-           ; v <- value
-           ; return (Slide (parseInt v))
-           }
-
-----
-
--- add
-add :: Parser Instruction
-add = do { wsTab
-         ; wsSpace
-         ; wsSpace
-         ; wsSpace
-         ; return Add
-         }
-
--- sub
-sub :: Parser Instruction
-sub = do { wsTab
-         ; wsSpace
-         ; wsSpace
-         ; wsTab
-         ; return Sub
-         }
-
--- mul
-mul :: Parser Instruction
-mul = do { wsTab
-         ; wsSpace
-         ; wsSpace
-         ; wsLf
-         ; return Mul
-         }
-
--- div
-wsDiv :: Parser Instruction
-wsDiv = do { wsTab
-         ; wsSpace
-         ; wsTab
-         ; wsSpace
-         ; return Div
-         }
-
--- mod
-wsMod :: Parser Instruction
-wsMod = do { wsTab
-         ; wsSpace
-         ; wsTab
-         ; wsLf
-         ; return Mod
-         }
-
-----
-
--- heap_write
-heapWrite :: Parser Instruction
-heapWrite = do { wsTab
-               ; wsTab
-               ; wsSpace
-               ; return HeapWrite
-               }
-
--- heap_read
-heapRead :: Parser Instruction
-heapRead = do { wsTab
-              ; wsTab
-              ; wsTab
-              ; return HeapRead
-              }
-
-----
-
--- label
-wsLabel :: Parser Instruction
-wsLabel = do { wsLf
-           ; wsSpace
-           ; wsSpace
-           ; v <- value
-           ; return (Label (parseLabel v))
-           }
-
--- call
-call :: Parser Instruction
-call = do { wsLf
-          ; wsSpace
-          ; wsTab
-          ; v <- value
-          ; return (Call (parseLabel v))
-          }
-
--- jump
-jump :: Parser Instruction
-jump = do { wsLf
-          ; wsSpace
-          ; wsLf
-          ; v <- value
-          ; return (Jump (parseLabel v))
-          }
-
--- jump_zero
-jumpZero :: Parser Instruction
-jumpZero = do { wsLf
-              ; wsTab
-              ; wsSpace
-              ; v <- value
-              ; return (JumpZero (parseLabel v))
-              }
-
--- jump_nega
-jumpNega :: Parser Instruction
-jumpNega = do { wsLf
-              ; wsTab
-              ; wsTab
-              ; v <- value
-              ; return (JumpNega (parseLabel v))
-              }
-
--- return
-wsReturn :: Parser Instruction
-wsReturn = do { wsLf
-              ; wsTab
-              ; wsLf
-              ; return Return
-              }
-
--- exit
-wsExit :: Parser Instruction
-wsExit = do { wsLf
-            ; wsLf
-            ; wsLf
-            ; return Exit
-            }
-
--- char_out
-charOut :: Parser Instruction
-charOut = do { wsTab
-             ; wsLf
-             ; wsSpace
-             ; wsSpace
-             ; return CharOut
-             }
-
--- num_out
-numOut :: Parser Instruction
-numOut = do { wsTab
-            ; wsLf
-            ; wsSpace
-            ; wsTab
-            ; return NumOut
-            }
-
--- char_in
-charIn :: Parser Instruction
-charIn = do { wsTab
-            ; wsLf
-            ; wsTab
-            ; wsSpace
-            ; return CharIn
-            }
-
--- num_in
-numIn :: Parser Instruction
-numIn = do { wsTab
-           ; wsLf
-           ; wsTab
-           ; wsTab
-           ; return NumIn
-           }
-
-----
-
 -- instructions
 instruction :: Parser Instruction
-instruction = do { i <- push
+instruction = do { wsSpace
+                 ; i <- do { wsSpace
+                           ; v <- value
+                           ; return (Push (parseInt v))             -- SSn  push
+                           }
+                    <|> do { wsTab
+                           ; j <- do { wsSpace
+                                     ; v <- value
+                                     ; return (Copy (parseInt v))   -- STSn copy
+                                     }
+                              <|> do { wsLf
+                                     ; v <- value
+                                     ; return (Slide (parseInt v))  -- STL  slide
+                                     }
+                           ; return j
+                           }
+                    <|> do { wsLf
+                           ; j <- do { wsSpace
+                                     ; return Dup                   -- SLS  dup
+                                     }
+                              <|> do { wsTab
+                                     ; return Swap                  -- SLT  swap
+                                     }
+                              <|> do { wsLf
+                                     ; return Discard               -- SLL  discard
+                                     }
+                           ; return j
+                           }
                  ; return i
                  }
-          <|> do { i <- dup
+          <|> do { wsTab
+                 ; i <- do { wsSpace
+                           ; j <- do { wsSpace
+                                     ; k <- do { wsSpace
+                                               ; return Add         -- TSSS add
+                                               }
+                                        <|> do { wsTab
+                                               ; return Sub         -- TSST sub
+                                               }
+                                        <|> do { wsLf
+                                               ; return Mul         -- TSSL sub
+                                               }
+                                     ; return k
+                                     }
+                              <|> do { wsTab
+                                     ; k <- do { wsSpace
+                                               ; return Div         -- TSTS div
+                                               }
+                                        <|> do { wsLf
+                                               ; return Mod         -- TSTL mod
+                                               }
+                                     ; return k
+                                     }
+                           ; return j
+                           }
+                    <|> do { wsTab
+                           ; j <- do { wsSpace
+                                     ; return HeapWrite             -- TTS  heap_write
+                                     }
+                              <|> do { wsTab
+                                     ; return HeapRead              -- TTT  heap_read
+                                     }
+                           ; return j
+                           }
+                    <|> do { wsLf
+                           ; j <- do { wsSpace
+                                     ; k <- do { wsSpace
+                                               ; return CharOut     -- TLSS char_out
+                                               }
+                                        <|> do { wsTab
+                                               ; return NumOut      -- TLST num_out
+                                               }
+                                     ; return k
+                                     }
+                              <|> do { wsTab
+                                     ; k <- do { wsSpace
+                                               ; return CharIn      -- TLTS char_in
+                                               }
+                                        <|> do { wsTab
+                                               ; return NumIn       -- TLTT num_in
+                                               }
+                                     ; return k
+                                     }
+                           ; return j
+                           }
                  ; return i
                  }
-          <|> do { i <- copy
+          <|> do { wsLf
+                 ; i <- do { wsSpace
+                           ; j <- do { wsSpace
+                                     ; v <- value
+                                     ; return (Label (parseLabel v))  -- LSSl label
+                                     }
+                              <|> do { wsTab
+                                     ; v <- value
+                                     ; return (Call (parseLabel v))   -- LSTl call
+                                     }
+                              <|> do { wsLf
+                                     ; v <- value
+                                     ; return (Jump (parseLabel v))   -- LSLl jump
+                                     }
+                           ; return j
+                           }
+                    <|> do { wsTab
+                           ; j <- do { wsSpace
+                                     ; v <- value
+                                     ; return (JumpZero (parseLabel v))  -- LTSl jump_zero
+                                     }
+                              <|> do { wsTab
+                                     ; v <- value
+                                     ; return (JumpNega (parseLabel v))  -- LTTl jump_nega
+                                     }
+                              <|> do { wsLf
+                                     ; return Return                     -- LTL  return
+                                     }
+                           ; return j
+                           }
+                    <|> do { wsLf
+                           ; wsLf
+                           ; return Exit                                 -- LLL  exit
+                           }
                  ; return i
                  }
-          <|> do { i <- swap
-                 ; return i
-                 }
-          <|> do { i <- discard
-                 ; return i
-                 }
-          <|> do { i <- slide
-                 ; return i
-                 }
-          <|> do { i <- add
-                 ; return i
-                 }
-          <|> do { i <- sub
-                 ; return i
-                 }
-          <|> do { i <- mul
-                 ; return i
-                 }
-          <|> do { i <- wsDiv
-                 ; return i
-                 }
-          <|> do { i <- wsMod
-                 ; return i
-                 }
-          <|> do { i <- heapWrite
-                 ; return i
-                 }
-          <|> do { i <- heapRead
-                 ; return i
-                 }
-          <|> do { i <- wsLabel
-                 ; return i
-                 }
-          <|> do { i <- call
-                 ; return i
-                 }
-          <|> do { i <- jump
-                 ; return i
-                 }
-          <|> do { i <- jumpZero
-                 ; return i
-                 }
-          <|> do { i <- jumpNega
-                 ; return i
-                 }
-          <|> do { i <- wsReturn
-                 ; return i
-                 }
-          <|> do { i <- wsExit
-                 ; return i
-                 }
-          <|> do { i <- charOut
-                 ; return i
-                 }
-          <|> do { i <- numOut
-                 ; return i
-                 }
-          <|> do { i <- charIn
-                 ; return i
-                 }
-          <|> do { i <- numIn
-                 ; return i
-                 }
+          <?> "Err: instruction"
+
 
 -- instruction list
 instructionList :: Parser [Instruction]
@@ -429,10 +266,10 @@ compile = runLex instructionList
 ----
 
 parseInt :: [Token] -> Int
-parseInt = undefined
+parseInt t = 1
 
 parseLabel :: [Token] -> WSLabel
-parseLabel = undefined
+parseLabel t = "label1"
 
 ------------------------------------------------------------------------
 
