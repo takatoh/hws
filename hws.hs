@@ -75,23 +75,24 @@ data VM = VM { stack :: [Int]
 data Token = Space
            | Tab
            | LF
+           deriving (Show, Eq)
 
 
 -- Space
 wsSpace :: Parser Token
-wsSpace = do { char 'S'
+wsSpace = do { char ' '
            ; return Space
            }
 
 -- Tab
 wsTab :: Parser Token
-wsTab = do { char 'T'
+wsTab = do { char '\t'
          ; return Tab
          }
 
 -- LF
 wsLf :: Parser Token
-wsLf = do { char 'L'
+wsLf = do { char '\n'
         ; return LF
         }
 
@@ -266,10 +267,15 @@ compile = runLex instructionList
 ----
 
 parseInt :: [Token] -> Int
-parseInt t = 1
+parseInt (x:xs) = (f x) * (g xs)
+  where
+    f Space =  1
+    f Tab   = (-1)
+    g = g' . map (\x -> if x == Space then 0 else 1)
+    g' = sum . zipWith (*) (iterate (*2) 1) . reverse
 
 parseLabel :: [Token] -> WSLabel
-parseLabel t = "label1"
+parseLabel = concatMap (\t -> "[" ++ show t ++ "]")
 
 ------------------------------------------------------------------------
 
