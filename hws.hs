@@ -67,6 +67,12 @@ step Div       vm = let (x1:x2:xs) = stack vm in
                     return $ vm { stack = (x2 `div` x1):xs, inst = shiftInst vm }
 step Mod       vm = let (x1:x2:xs) = stack vm in
                     return $ vm { stack = (x2 `mod` x1):xs, inst = shiftInst vm }
+step HeapWrite vm = let (val:addr:xs) = stack vm in
+                    return $ vm { stack = xs, heap = (addr, val):heap vm, inst = shiftInst vm }
+step HeapRead  vm = let (addr, v) = pop vm in
+                    let x = lookup addr $ heap vm in
+                    case x of
+                    Just y -> return $ v { stack = y:stack v, inst = shiftInst v }
 step NumOut    vm = do let (n, v) = pop vm
                        putStr $ show n
                        return $ v { inst = shiftInst v }
