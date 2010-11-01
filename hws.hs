@@ -18,7 +18,6 @@ main = do program <- getContents
 
 ------------------------------------------------------------------------
 
-
 initVM :: [Instruction] -> VM
 initVM insns = VM { stack = []
                   , heap = []
@@ -33,10 +32,22 @@ findLabels i = f $ zip i [0..]
     f (((Label x), n):xs) = (x, n) : f xs
     f (( _,        _):xs) = f xs
 
+----
 
 run :: VM -> IO ()
-run = undefined
+run vm = case fetch vm of
+         Exit -> return ()
+         i    -> do vmNext <- step i vm
+                    run vmNext
 
+fetch :: VM -> Instruction
+fetch = f . snd . inst
+  where
+    f []     = Exit
+    f (x:xs) = x
+
+step :: Instruction -> VM -> IO VM
+step = undefined
 
 ------------------------------------------------------------------------
 
