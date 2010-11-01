@@ -47,7 +47,25 @@ fetch = f . snd . inst
     f (x:xs) = x
 
 step :: Instruction -> VM -> IO VM
-step = undefined
+step (Push n) vm = return $ vm { stack = n : stack vm, inst = shiftInst vm }
+step NumOut   vm = do let (n, v) = pop vm
+                      putStr $ show n
+                      return $ v { inst = shiftInst v }
+
+
+
+pop :: VM -> (Int, VM)
+pop vm = let (x:xs) = stack vm in
+         (x, vm { stack = xs })
+
+shiftInst :: VM -> ([Instruction], [Instruction])
+shiftInst vm = let (xs, (y:ys)) = inst vm in
+               (y:xs, ys)
+
+unshiftInst :: VM -> ([Instruction], [Instruction])
+unshiftInst vm = let ((x:xs), ys) = inst vm in
+                 (xs, x:ys)
+
 
 ------------------------------------------------------------------------
 
