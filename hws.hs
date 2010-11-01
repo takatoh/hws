@@ -47,10 +47,29 @@ fetch = f . snd . inst
     f (x:xs) = x
 
 step :: Instruction -> VM -> IO VM
-step (Push n) vm = return $ vm { stack = n : stack vm, inst = shiftInst vm }
-step NumOut   vm = do let (n, v) = pop vm
-                      putStr $ show n
-                      return $ v { inst = shiftInst v }
+step (Push n)  vm = return $ vm { stack = n:stack vm, inst = shiftInst vm }
+step Dup       vm = let (n, v) = pop vm in
+                    return $ v { stack = n:n:stack v, inst = shiftInst v }
+step (Copy n)  vm = let m = head $ drop n $ stack vm in
+                    return $ vm { stack = m:stack vm, inst = shiftInst vm }
+step Swap      vm = let (x1:x2:xs) = stack vm in
+                    return $ vm { stack = x2:x1:xs, inst = shiftInst vm }
+step Discard   vm = return $ vm { stack = (tail.stack) vm, inst = shiftInst vm }
+step (Slide n) vm = let (x:xs) = stack vm in
+                    return $ vm { stack = x:drop n xs, inst = shiftInst vm }
+step Add       vm = let (x1:x2:xs) = stack vm in
+                    return $ vm { stack = (x2+x1):xs, inst = shiftInst vm }
+step Sub       vm = let (x1:x2:xs) = stack vm in
+                    return $ vm { stack = (x2-x1):xs, inst = shiftInst vm }
+step Mul       vm = let (x1:x2:xs) = stack vm in
+                    return $ vm { stack = (x2*x1):xs, inst = shiftInst vm }
+step Div       vm = let (x1:x2:xs) = stack vm in
+                    return $ vm { stack = (x2 `div` x1):xs, inst = shiftInst vm }
+step Mod       vm = let (x1:x2:xs) = stack vm in
+                    return $ vm { stack = (x2 `mod` x1):xs, inst = shiftInst vm }
+step NumOut    vm = do let (n, v) = pop vm
+                       putStr $ show n
+                       return $ v { inst = shiftInst v }
 
 
 
