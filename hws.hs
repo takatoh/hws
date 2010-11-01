@@ -13,18 +13,25 @@ import Char
 main :: IO ()
 main = do program <- getContents
           let insns = compile program
---          run $ initVM insns
-          mapM_ (putStrLn.show) insns
+          run $ initVM insns
+--          mapM_ (putStrLn.show) insns
 
 ------------------------------------------------------------------------
 
 
---initVM :: [Instruction] -> VM
---initVM = undefined
---
---
---run :: VM -> IO ()
---run = undefined
+initVM :: [Instruction] -> VM
+initVM insns = VM { stack = []
+                  , heap = []
+                  , inst = ([], insns)
+                  , labelList = findLabels insns
+                  }
+
+findLabels :: [Instruction] -> [(Int, Int)]
+findLabels = undefined
+
+
+run :: VM -> IO ()
+run = undefined
 
 
 ------------------------------------------------------------------------
@@ -61,8 +68,9 @@ type WSLabel = String
 
 
 data VM = VM { stack :: [Int]
-             , heap :: [Int]
-             , inst :: [Instruction]
+             , heap :: [(Int, Int)]
+             , inst :: ([Instruction], [Instruction])
+             , labelList :: [(Int, Int)]
              }
 
 ------------------------------------------------------------------------
