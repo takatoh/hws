@@ -26,8 +26,12 @@ initVM insns = VM { stack = []
                   , labelList = findLabels insns
                   }
 
-findLabels :: [Instruction] -> [(Int, Int)]
-findLabels = undefined
+findLabels :: [Instruction] -> [(WSLabel, Int)]
+findLabels i = f $ zip i [0..]
+  where
+    f []                    = []
+    f (((Label x), n):xs) = (x, n) : f xs
+    f (( _,        _):xs) = f xs
 
 
 run :: VM -> IO ()
@@ -70,7 +74,7 @@ type WSLabel = String
 data VM = VM { stack :: [Int]
              , heap :: [(Int, Int)]
              , inst :: ([Instruction], [Instruction])
-             , labelList :: [(Int, Int)]
+             , labelList :: [(WSLabel, Int)]
              }
 
 ------------------------------------------------------------------------
