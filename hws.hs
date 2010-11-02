@@ -23,6 +23,7 @@ initVM insns = VM { stack = []
                   , heap = []
                   , inst = ([], insns)
                   , labelList = findLabels insns
+                  , labelStack = []
                   }
 
 findLabels :: [Instruction] -> [(WSLabel, Int)]
@@ -136,6 +137,7 @@ data VM = VM { stack :: [Int]
              , heap :: [(Int, Int)]
              , inst :: ([Instruction], [Instruction])
              , labelList :: [(WSLabel, Int)]
+             , labelStack :: [WSLabel]
              }
 
 ------------------------------------------------------------------------
