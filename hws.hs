@@ -23,7 +23,7 @@ initVM insns = VM { stack = []
                   , heap = []
                   , inst = ([], insns)
                   , labelList = findLabels insns
-                  , labelStack = []
+                  , callStack = []
                   }
 
 findLabels :: [Instruction] -> [(WSLabel, Int)]
@@ -75,6 +75,8 @@ step HeapRead  vm = let (addr, v) = pop vm in
                     case x of
                     Just y -> return $ v { stack = y:stack v, inst = shiftInst v }
 step (Label l) vm = return $ vm { inst = shiftInst vm }
+step (Call l)  vm = let addr = 1 + (length.fst.inst) vm in
+                    return $ jump l $ vm { callStack = addr : callStack vm }
 step (Jump l)  vm = return $ jump l vm
 step (JumpZero l) vm = let (p, v) = pop vm in
                        if p == 0 then return $ jump l v
@@ -82,6 +84,8 @@ step (JumpZero l) vm = let (p, v) = pop vm in
 step (JumpNega l) vm = let (p, v) = pop vm in
                        if p < 0 then return $ jump l v
                                 else return $ v { inst = shiftInst v }
+step Return    vm = let (addr, v) = popAddr vm in
+                    return $ jumpAddr addr v
 step CharOut   vm = do let (n, v) = pop vm
                        putStr $ [chr n]
                        return $ v { inst = shiftInst v }
@@ -93,11 +97,15 @@ step CharIn    vm = do c <- getChar
 step NumIn     vm = do s <- getLine
                        return $ vm { stack = read s:stack vm, inst = shiftInst vm }
 
-
+----
 
 pop :: VM -> (Int, VM)
 pop vm = let (x:xs) = stack vm in
          (x, vm { stack = xs })
+
+popAddr :: VM -> (Int, VM)
+popAddr vm = let (x:xs) = callStack vm in
+             (x, vm { callStack = xs })
 
 shiftInst :: VM -> ([Instruction], [Instruction])
 shiftInst vm = let (xs, (y:ys)) = inst vm in
@@ -114,6 +122,14 @@ jump l vm = let i = lookupLable l vm in
                           vm { inst = is }
                      else let is = times shift (i-c) $ inst vm in
                           vm { inst = is }
+
+jumpAddr :: Int -> VM -> VM
+jumpAddr addr vm = let c = (length.fst.inst) vm in
+                   if addr < c then let is = times unshift (c-addr) $ inst vm in
+                                    vm { inst = is }
+                               else let is = times shift (addr-c) $ inst vm in
+                                    vm { inst = is }
+
 
 lookupLable :: WSLabel -> VM -> Int
 lookupLable l vm = case (lookup l $ labelList vm) of
@@ -168,7 +184,7 @@ data VM = VM { stack :: [Int]
              , heap :: [(Int, Int)]
              , inst :: ([Instruction], [Instruction])
              , labelList :: [(WSLabel, Int)]
-             , labelStack :: [WSLabel]
+             , callStack :: [Int]
              }
 
 ------------------------------------------------------------------------
