@@ -74,6 +74,14 @@ step HeapRead  vm = let (addr, v) = pop vm in
                     let x = lookup addr $ heap vm in
                     case x of
                     Just y -> return $ v { stack = y:stack v, inst = shiftInst v }
+step (Label l) vm = return $ vm { inst = shiftInst vm }
+step (Jump l)  vm = return $ jump l vm
+step (JumpZero l) vm = let (p, v) = pop vm in
+                       if p == 0 then return $ jump l v
+                                 else return $ v { inst = shiftInst v }
+step (JumpNega l) vm = let (p, v) = pop vm in
+                       if p < 0 then return $ jump l v
+                                else return $ v { inst = shiftInst v }
 step CharOut   vm = do let (n, v) = pop vm
                        putStr $ [chr n]
                        return $ v { inst = shiftInst v }
@@ -99,6 +107,29 @@ unshiftInst :: VM -> ([Instruction], [Instruction])
 unshiftInst vm = let ((x:xs), ys) = inst vm in
                  (xs, x:ys)
 
+jump :: WSLabel -> VM -> VM
+jump l vm = let i = lookupLable l vm in
+            let c = (length.fst.inst) vm in
+            if i < c then let is = times unshift (c-i) $ inst vm in
+                          vm { inst = is }
+                     else let is = times shift (i-c) $ inst vm in
+                          vm { inst = is }
+
+lookupLable :: WSLabel -> VM -> Int
+lookupLable l vm = case (lookup l $ labelList vm) of
+                   Just x -> x
+
+times :: (a -> a) -> Int -> a -> a
+times f 1 x = f x
+times f n x = f (times f (n-1) x)
+
+shift :: ([a], [a]) -> ([a], [a])
+shift (xs, [])     = (xs, [])
+shift (xs, (y:ys)) = (y:xs, ys)
+
+unshift :: ([a], [a]) -> ([a], [a])
+unshift ([], ys)     = ([], ys)
+unshift ((x:xs), ys) = (xs, x:ys)
 
 ------------------------------------------------------------------------
 
