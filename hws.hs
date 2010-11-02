@@ -73,9 +73,16 @@ step HeapRead  vm = let (addr, v) = pop vm in
                     let x = lookup addr $ heap vm in
                     case x of
                     Just y -> return $ v { stack = y:stack v, inst = shiftInst v }
+step CharOut   vm = do let (n, v) = pop vm
+                       putStr $ [chr n]
+                       return $ v { inst = shiftInst v }
 step NumOut    vm = do let (n, v) = pop vm
                        putStr $ show n
                        return $ v { inst = shiftInst v }
+step CharIn    vm = do c <- getChar
+                       return $ vm { stack = ord c:stack vm, inst = shiftInst vm }
+step NumIn     vm = do s <- getLine
+                       return $ vm { stack = read s:stack vm, inst = shiftInst vm }
 
 
 
