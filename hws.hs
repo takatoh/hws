@@ -3,8 +3,6 @@ module Main where
 
 import Text.ParserCombinators.Parsec
 import Text.ParserCombinators.Parsec.Expr
--- import qualified Text.ParserCombinators.Parsec.Token as P
--- import Text.ParserCombinators.Parsec.Language( haskellStyle, haskellDef )
 import Char
 
 
@@ -14,140 +12,13 @@ main :: IO ()
 main = do program <- getContents
           let insns = compile program
           run $ initVM insns
---          mapM_ (putStrLn.show) insns
 
 ------------------------------------------------------------------------
 
-initVM :: [Instruction] -> VM
-initVM insns = VM { stack = []
-                  , heap = []
-                  , inst = ([], insns)
-                  , labelList = findLabels insns
-                  , callStack = []
-                  }
+--
+-- Data difinition
+--
 
-findLabels :: [Instruction] -> [(WSLabel, Int)]
-findLabels i = f $ zip i [0..]
-  where
-    f []                    = []
-    f (((Label x), n):xs) = (x, n) : f xs
-    f (( _,        _):xs) = f xs
-
-----
-
-run :: VM -> IO ()
-run vm = case fetch vm of
-         Exit -> return ()
-         i    -> do vmNext <- step i vm
-                    run vmNext
-
-fetch :: VM -> Instruction
-fetch = f . snd . inst
-  where
-    f []     = Exit
-    f (x:xs) = x
-
-step :: Instruction -> VM -> IO VM
-step (Push n)  vm = return $ vm { stack = n:stack vm, inst = shiftInst vm }
-step Dup       vm = let (n, v) = pop vm in
-                    return $ v { stack = n:n:stack v, inst = shiftInst v }
-step (Copy n)  vm = let m = head $ drop n $ stack vm in
-                    return $ vm { stack = m:stack vm, inst = shiftInst vm }
-step Swap      vm = let (x1:x2:xs) = stack vm in
-                    return $ vm { stack = x2:x1:xs, inst = shiftInst vm }
-step Discard   vm = return $ vm { stack = (tail.stack) vm, inst = shiftInst vm }
-step (Slide n) vm = let (x:xs) = stack vm in
-                    return $ vm { stack = x:drop n xs, inst = shiftInst vm }
-step Add       vm = let (x1:x2:xs) = stack vm in
-                    return $ vm { stack = (x2+x1):xs, inst = shiftInst vm }
-step Sub       vm = let (x1:x2:xs) = stack vm in
-                    return $ vm { stack = (x2-x1):xs, inst = shiftInst vm }
-step Mul       vm = let (x1:x2:xs) = stack vm in
-                    return $ vm { stack = (x2*x1):xs, inst = shiftInst vm }
-step Div       vm = let (x1:x2:xs) = stack vm in
-                    return $ vm { stack = (x2 `div` x1):xs, inst = shiftInst vm }
-step Mod       vm = let (x1:x2:xs) = stack vm in
-                    return $ vm { stack = (x2 `mod` x1):xs, inst = shiftInst vm }
-step HeapWrite vm = let (val:addr:xs) = stack vm in
-                    return $ vm { stack = xs, heap = (addr, val):heap vm, inst = shiftInst vm }
-step HeapRead  vm = let (addr, v) = pop vm in
-                    let x = lookup addr $ heap vm in
-                    case x of
-                    Just y -> return $ v { stack = y:stack v, inst = shiftInst v }
-step (Label l) vm = return $ vm { inst = shiftInst vm }
-step (Call l)  vm = let addr = 1 + (length.fst.inst) vm in
-                    return $ jump l $ vm { callStack = addr : callStack vm }
-step (Jump l)  vm = return $ jump l vm
-step (JumpZero l) vm = let (p, v) = pop vm in
-                       if p == 0 then return $ jump l v
-                                 else return $ v { inst = shiftInst v }
-step (JumpNega l) vm = let (p, v) = pop vm in
-                       if p < 0 then return $ jump l v
-                                else return $ v { inst = shiftInst v }
-step Return    vm = let (addr, v) = popAddr vm in
-                    return $ jumpAddr addr v
-step CharOut   vm = do let (n, v) = pop vm
-                       putStr $ [chr n]
-                       return $ v { inst = shiftInst v }
-step NumOut    vm = do let (n, v) = pop vm
-                       putStr $ show n
-                       return $ v { inst = shiftInst v }
-step CharIn    vm = do c <- getChar
-                       return $ vm { stack = ord c:stack vm, inst = shiftInst vm }
-step NumIn     vm = do s <- getLine
-                       return $ vm { stack = read s:stack vm, inst = shiftInst vm }
-
-----
-
-pop :: VM -> (Int, VM)
-pop vm = let (x:xs) = stack vm in
-         (x, vm { stack = xs })
-
-popAddr :: VM -> (Int, VM)
-popAddr vm = let (x:xs) = callStack vm in
-             (x, vm { callStack = xs })
-
-shiftInst :: VM -> ([Instruction], [Instruction])
-shiftInst vm = let (xs, (y:ys)) = inst vm in
-               (y:xs, ys)
-
-unshiftInst :: VM -> ([Instruction], [Instruction])
-unshiftInst vm = let ((x:xs), ys) = inst vm in
-                 (xs, x:ys)
-
-jump :: WSLabel -> VM -> VM
-jump l vm = let i = lookupLable l vm in
-            let c = (length.fst.inst) vm in
-            if i < c then let is = times unshift (c-i) $ inst vm in
-                          vm { inst = is }
-                     else let is = times shift (i-c) $ inst vm in
-                          vm { inst = is }
-
-jumpAddr :: Int -> VM -> VM
-jumpAddr addr vm = let c = (length.fst.inst) vm in
-                   if addr < c then let is = times unshift (c-addr) $ inst vm in
-                                    vm { inst = is }
-                               else let is = times shift (addr-c) $ inst vm in
-                                    vm { inst = is }
-
-
-lookupLable :: WSLabel -> VM -> Int
-lookupLable l vm = case (lookup l $ labelList vm) of
-                   Just x -> x
-
-times :: (a -> a) -> Int -> a -> a
-times f 1 x = f x
-times f n x = f (times f (n-1) x)
-
-shift :: ([a], [a]) -> ([a], [a])
-shift (xs, [])     = (xs, [])
-shift (xs, (y:ys)) = (y:xs, ys)
-
-unshift :: ([a], [a]) -> ([a], [a])
-unshift ([], ys)     = ([], ys)
-unshift ((x:xs), ys) = (xs, x:ys)
-
-------------------------------------------------------------------------
 
 data Instruction = Push Int
                  | Dup
@@ -398,6 +269,141 @@ parseInt (x:xs) = (f x) * (g xs)
 
 parseLabel :: [Token] -> WSLabel
 parseLabel = concatMap (\t -> "[" ++ show t ++ "]")
+
+------------------------------------------------------------------------
+
+--
+-- Virtual Machine
+--
+
+
+initVM :: [Instruction] -> VM
+initVM insns = VM { stack = []
+                  , heap = []
+                  , inst = ([], insns)
+                  , labelList = findLabels insns
+                  , callStack = []
+                  }
+
+findLabels :: [Instruction] -> [(WSLabel, Int)]
+findLabels i = f $ zip i [0..]
+  where
+    f []                    = []
+    f (((Label x), n):xs) = (x, n) : f xs
+    f (( _,        _):xs) = f xs
+
+----
+
+run :: VM -> IO ()
+run vm = case fetch vm of
+         Exit -> return ()
+         i    -> do vmNext <- step i vm
+                    run vmNext
+
+fetch :: VM -> Instruction
+fetch = f . snd . inst
+  where
+    f []     = Exit
+    f (x:xs) = x
+
+step :: Instruction -> VM -> IO VM
+step (Push n)     vm = return $ vm { stack = n:stack vm, inst = shiftInst vm }
+step Dup          vm = let (n, v) = pop vm in
+                       return $ v { stack = n:n:stack v, inst = shiftInst v }
+step (Copy n)     vm = let m = head $ drop n $ stack vm in
+                       return $ vm { stack = m:stack vm, inst = shiftInst vm }
+step Swap         vm = let (x1:x2:xs) = stack vm in
+                       return $ vm { stack = x2:x1:xs, inst = shiftInst vm }
+step Discard      vm = return $ vm { stack = (tail.stack) vm, inst = shiftInst vm }
+step (Slide n)    vm = let (x:xs) = stack vm in
+                       return $ vm { stack = x:drop n xs, inst = shiftInst vm }
+step Add          vm = let (x1:x2:xs) = stack vm in
+                       return $ vm { stack = (x2+x1):xs, inst = shiftInst vm }
+step Sub          vm = let (x1:x2:xs) = stack vm in
+                       return $ vm { stack = (x2-x1):xs, inst = shiftInst vm }
+step Mul          vm = let (x1:x2:xs) = stack vm in
+                       return $ vm { stack = (x2*x1):xs, inst = shiftInst vm }
+step Div          vm = let (x1:x2:xs) = stack vm in
+                       return $ vm { stack = (x2 `div` x1):xs, inst = shiftInst vm }
+step Mod          vm = let (x1:x2:xs) = stack vm in
+                       return $ vm { stack = (x2 `mod` x1):xs, inst = shiftInst vm }
+step HeapWrite    vm = let (val:addr:xs) = stack vm in
+                       return $ vm { stack = xs, heap = (addr, val):heap vm, inst = shiftInst vm }
+step HeapRead     vm = let (addr, v) = pop vm in
+                       let x = lookup addr $ heap vm in
+                       case x of
+                       Just y -> return $ v { stack = y:stack v, inst = shiftInst v }
+step (Label l)    vm = return $ vm { inst = shiftInst vm }
+step (Call l)     vm = let addr = 1 + (length.fst.inst) vm in
+                       return $ jump l $ vm { callStack = addr : callStack vm }
+step (Jump l)     vm = return $ jump l vm
+step (JumpZero l) vm = let (p, v) = pop vm in
+                       if p == 0 then return $ jump l v
+                                 else return $ v { inst = shiftInst v }
+step (JumpNega l) vm = let (p, v) = pop vm in
+                       if p < 0 then return $ jump l v
+                                else return $ v { inst = shiftInst v }
+step Return       vm = let (addr, v) = popAddr vm in
+                       return $ jumpAddr addr v
+step CharOut      vm = do let (n, v) = pop vm
+                          putStr $ [chr n]
+                          return $ v { inst = shiftInst v }
+step NumOut       vm = do let (n, v) = pop vm
+                          putStr $ show n
+                          return $ v { inst = shiftInst v }
+step CharIn       vm = do c <- getChar
+                          return $ vm { stack = ord c:stack vm, inst = shiftInst vm }
+step NumIn        vm = do s <- getLine
+                          return $ vm { stack = read s:stack vm, inst = shiftInst vm }
+
+----
+
+pop :: VM -> (Int, VM)
+pop vm = let (x:xs) = stack vm in
+         (x, vm { stack = xs })
+
+popAddr :: VM -> (Int, VM)
+popAddr vm = let (x:xs) = callStack vm in
+             (x, vm { callStack = xs })
+
+shiftInst :: VM -> ([Instruction], [Instruction])
+shiftInst vm = let (xs, (y:ys)) = inst vm in
+               (y:xs, ys)
+
+unshiftInst :: VM -> ([Instruction], [Instruction])
+unshiftInst vm = let ((x:xs), ys) = inst vm in
+                 (xs, x:ys)
+
+jump :: WSLabel -> VM -> VM
+jump l vm = let i = lookupLable l vm in
+            let c = (length.fst.inst) vm in
+            if i < c then let is = times unshift (c-i) $ inst vm in
+                          vm { inst = is }
+                     else let is = times shift (i-c) $ inst vm in
+                          vm { inst = is }
+
+jumpAddr :: Int -> VM -> VM
+jumpAddr addr vm = let c = (length.fst.inst) vm in
+                   if addr < c then let is = times unshift (c-addr) $ inst vm in
+                                    vm { inst = is }
+                               else let is = times shift (addr-c) $ inst vm in
+                                    vm { inst = is }
+
+lookupLable :: WSLabel -> VM -> Int
+lookupLable l vm = case (lookup l $ labelList vm) of
+                   Just x -> x
+
+times :: (a -> a) -> Int -> a -> a
+times f 1 x = f x
+times f n x = f (times f (n-1) x)
+
+shift :: ([a], [a]) -> ([a], [a])
+shift (xs, [])     = (xs, [])
+shift (xs, (y:ys)) = (y:xs, ys)
+
+unshift :: ([a], [a]) -> ([a], [a])
+unshift ([], ys)     = ([], ys)
+unshift ((x:xs), ys) = (xs, x:ys)
 
 ------------------------------------------------------------------------
 
