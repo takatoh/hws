@@ -25,23 +25,31 @@ main = do argv <- getArgs
               putStrLn $ usageInfo header options
             else do program <- readFile (head n)
                     let insns = compile program
-                    run $ initVM insns
+                    if optInstruction o then
+                        showInst insns
+                      else
+                        run $ initVM insns
 
 
 ------------------------------------------------------------------------
 
 -- Command-line options
 
-data Options = Options { optShowVersion  :: Bool
-                       , optShowHelp     :: Bool
+data Options = Options { optShowVersion :: Bool
+                       , optShowHelp    :: Bool
+                       , optInstruction :: Bool
                        } deriving (Show, Eq)
 
-defaultOptions = Options  { optShowVersion  = False
-                          , optShowHelp     = False
+defaultOptions = Options  { optShowVersion = False
+                          , optShowHelp    = False
+                          , optInstruction = False
                           }
 
 options :: [OptDescr (Options -> Options)]
-options = [ Option ['v']     ["version"]
+options = [ Option ['i']     ["instruction"]
+            (NoArg (\ opts -> opts { optInstruction = True }))
+            "show instructions"
+          , Option ['v']     ["version"]
             (NoArg (\ opts -> opts { optShowVersion = True }))
             "show version"
           , Option ['h','?'] ["help"]
@@ -56,6 +64,9 @@ parseArgs :: [String] -> IO (Options, [String])
 parseArgs argv = case getOpt Permute options argv of
                    (o,n,[])   -> return (foldl (flip id) defaultOptions o, n)
                    (_,_,errs) -> ioError (userError (concat errs ++ usageInfo header options))
+
+showInst :: [Instruction] -> IO ()
+showInst = mapM_ (putStrLn . show)
 
 ------------------------------------------------------------------------
 
