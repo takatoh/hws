@@ -5,13 +5,57 @@ import Text.ParserCombinators.Parsec
 import Text.ParserCombinators.Parsec.Expr
 import Char
 
+import System.Environment ( getArgs )
+import System.Console.GetOpt
+
 
 ------------------------------------------------------------------------
 
+
+progName = "hws"
+version  = "v0.1.0"
+
+
 main :: IO ()
-main = do program <- getContents
-          let insns = compile program
-          run $ initVM insns
+main = do argv <- getArgs
+          (o, n) <- parseArgs argv
+          if optShowVersion o then
+              putStrLn version
+            else if optShowHelp o then
+              putStrLn $ usageInfo header options
+            else do program <- readFile (head n)
+                    let insns = compile program
+                    run $ initVM insns
+
+
+------------------------------------------------------------------------
+
+-- Command-line options
+
+data Options = Options { optShowVersion  :: Bool
+                       , optShowHelp     :: Bool
+                       } deriving (Show, Eq)
+
+defaultOptions = Options  { optShowVersion  = False
+                          , optShowHelp     = False
+                          }
+
+options :: [OptDescr (Options -> Options)]
+options = [ Option ['v']     ["version"]
+            (NoArg (\ opts -> opts { optShowVersion = True }))
+            "show version"
+          , Option ['h','?'] ["help"]
+            (NoArg (\ opts -> opts { optShowHelp = True }))
+            "show this message"
+          ]
+
+header :: String
+header = "Usage: " ++ progName ++ " [OPTIONS...] PROG_FILE"
+
+parseArgs :: [String] -> IO (Options, [String])
+parseArgs argv = case getOpt Permute options argv of
+                   (o,n,[])   -> return (foldl (flip id) defaultOptions o, n)
+                   (_,_,errs) -> ioError (userError (concat errs ++ usageInfo header options))
 
 ------------------------------------------------------------------------
 
